@@ -1,0 +1,18 @@
+<!-- GUI/templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Monitoring Dashboard</title>
+</head>
+<body>
+    <h1>Server Monitoring Dashboard</h1>
+    <h2>Server: {{ hostname }}</h2>
+    <ul>
+        <li>CPU Usage: {{ cpu_usage }}%</li>
+        <li>Memory Usage: {{ memory_usage }}%</li>
+        <li>Disk Usage: {{ disk_usage }}%</li>
+    </ul>
+</body>
+</html>
