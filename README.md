@@ -69,7 +69,7 @@ Run the monitoring script:
 
 ```bash
 python watch.py
-
+```
 
 The script will start monitoring the server based on the configured thresholds and send email notifications when necessary. If the web interface is enabled in the configuration, it will also start the Flask web server.
 
