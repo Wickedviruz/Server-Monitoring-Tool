@@ -105,7 +105,7 @@ process_name = "example_process_name"
 cpu_threshold = 50
 memory_threshold = 50
 restart_on_failure = true
-
+```
 
 ## Contributing
 
