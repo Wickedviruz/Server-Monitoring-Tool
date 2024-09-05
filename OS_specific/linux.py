@@ -1,5 +1,5 @@
 import os
-from utils.logging import log_message
+from base.logger import log_message
 
 def manage_service(service_name, action):
     os.system(f"systemctl {action} {service_name}")
@@ -8,3 +8,7 @@ def manage_service(service_name, action):
 def add_user(username):
     os.system(f"useradd {username}")
     log_message("info", f"User {username} added on Linux.")
+
+def restart_process_linux(process_name):
+    """Specifik metod för att starta om processer i Linux"""
+    os.system(f"systemctl restart {process_name}")

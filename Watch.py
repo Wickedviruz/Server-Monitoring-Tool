@@ -1,7 +1,7 @@
 import psutil
 import time
 import smtplib
-import logging
+from base.logger import log_message
 import datetime
 import configparser
 import socket
@@ -15,8 +15,6 @@ from email.mime.multipart import MIMEMultipart
 # Config parser and logging
 config = configparser.ConfigParser()
 config.read('config.ini')
-logging.basicConfig(filename='server_monitor.log', level=logging.INFO,
-                    format='%(asctime)s %(levelname)s: %(message)s')
 
 # Parse general config
 enable_web_interface = config.getboolean('general', 'enable_web_interface')
@@ -61,15 +59,6 @@ if enable_web_interface:
     # Starta Flask-applikationen i en separat tråd så att den inte blockerar övervakningsloopen
     flask_thread = Thread(target=app.run, kwargs={'host': '0.0.0.0', 'port': 5000})
     flask_thread.start()
-
-def log_message(level, message):
-    message = f"{hostname}: {message}"
-    if level == "info":
-        logging.info(message)
-    elif level == "warning":
-        logging.warning(message)
-    elif level == "error":
-        logging.error(message)
 
 def reload_config():
     config.read('config.ini')
@@ -126,26 +115,26 @@ def detect_ddos_pattern():
             network_usage_samples.clear()
 
 def send_email(subject, body):
-    for email in RECEIVER_EMAILS:
-        subject = f"{hostname} - {subject}"
-        msg = MIMEMultipart()
-        msg['From'] = SENDER_EMAIL
-        msg['To'] = RECEIVER_EMAILS
-        msg['Subject'] = subject
+    subject = f"{hostname} - {subject}"
+    msg = MIMEMultipart()
+    msg['From'] = SENDER_EMAIL
+    msg['To'] = ', '.join(RECEIVER_EMAILS)
+    msg['Subject'] = subject
 
-        body = f"Server: {hostname}\n\n{body}"
-        msg.attach(MIMEText(body, 'plain'))
+    body = f"Server: {hostname}\n\n{body}"
+    msg.attach(MIMEText(body, 'plain'))
 
-        try:
-            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-            server.starttls()
-            server.login(SMTP_USER, SMTP_PASSWORD)
-            text = msg.as_string()
-            server.sendmail(SENDER_EMAIL, RECEIVER_EMAILS, text)
-            server.quit()
-            log_message("info", "Email sent!")
-        except Exception as e:
-            log_message("error", f"Failed to send email. Error: {e}")
+    try:
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()
+        server.login(SMTP_USER, SMTP_PASSWORD)
+        text = msg.as_string()
+        server.sendmail(SENDER_EMAIL, RECEIVER_EMAILS, text)
+        server.quit()
+        log_message("info", "Email sent!")
+    except Exception as e:
+        log_message("error", f"Failed to send email. Error: {e}")
+
 
 
 def restart_process(process_name):

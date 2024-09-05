@@ -1,5 +1,5 @@
 import os
-from utils.logging import log_message
+from base.logger import log_message
 
 def manage_service(service_name, action):
     os.system(f"net {action} {service_name}")
@@ -8,3 +8,7 @@ def manage_service(service_name, action):
 def add_user(username):
     os.system(f"net user {username} /add")
     log_message("info", f"User {username} added on Windows.")
+
+def restart_process_windows(process_name):
+    """Specifik metod för att starta om processer i Windows"""
+    os.system(f"taskkill /F /IM {process_name}")
