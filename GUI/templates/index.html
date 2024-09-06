@@ -1,18 +1,39 @@
-<!-- GUI/templates/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Server Monitoring Dashboard</title>
+    <title>Server Monitor - {{ hostname }}</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
-    <h1>Server Monitoring Dashboard</h1>
-    <h2>Server: {{ hostname }}</h2>
-    <ul>
-        <li>CPU Usage: {{ cpu_usage }}%</li>
-        <li>Memory Usage: {{ memory_usage }}%</li>
-        <li>Disk Usage: {{ disk_usage }}%</li>
-    </ul>
+    <h1>Server Monitor for {{ hostname }}</h1>
+
+    <div>
+        <h3>CPU Usage: <span id="cpu-usage">0%</span></h3>
+        <h3>Memory Usage: <span id="memory-usage">0%</span></h3>
+        <h3>Disk Usage: <span id="disk-usage">0%</span></h3>
+        <h3>Upload Speed: <span id="upload-speed">0 Mbps</span></h3>
+        <h3>Download Speed: <span id="download-speed">0 Mbps</span></h3>
+    </div>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+            // Skicka begäran om att starta datauppdatering
+            socket.emit('request_data');
+
+            // Ta emot data från servern och uppdatera HTML-element
+            socket.on('update_data', function (data) {
+                $('#cpu-usage').text(data.cpu_usage + '%');
+                $('#memory-usage').text(data.memory_usage + '%');
+                $('#disk-usage').text(data.disk_usage + '%');
+                $('#upload-speed').text(data.upload_speed + ' Mbps');
+                $('#download-speed').text(data.download_speed + ' Mbps');
+            });
+        });
+    </script>
 </body>
 </html>

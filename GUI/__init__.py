@@ -1,7 +1,7 @@
-# GUI/__init__.py
 from flask import Flask
+from flask_socketio import SocketIO
 
 app = Flask(__name__)
+socketio = SocketIO(app) 
 
 from GUI import routes
-

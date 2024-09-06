@@ -2,21 +2,16 @@ import psutil
 import time
 import smtplib
 from base.logger import log_message
+from base.config import config, reload_config
+from threading import Thread
 import datetime
-import configparser
 import socket
 import platform
 import os
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-
-
 # Config parser and logging
-config = configparser.ConfigParser()
-config.read('config.ini')
-
-# Parse general config
 enable_web_interface = config.getboolean('general', 'enable_web_interface')
 
 # Parse threshold config
@@ -33,86 +28,93 @@ SMTP_PORT = config.getint('email', 'SMTP_PORT')
 SMTP_USER = config.get('email', 'SMTP_USER')
 SMTP_PASSWORD = config.get('email', 'SMTP_PASSWORD')
 
-os_type =platform.system()
+os_type = platform.system()
+hostname = socket.gethostname()
 
-
-# Prevents from spamming emails
 cpu_alert_sent = False
 memory_alert_sent = False
 network_alert_sent = False
 disk_alert_sent = False
 process_alert_sent = {}
 last_report_time = datetime.datetime.now()
-hostname = socket.gethostname()
 
-# Nätverkstrafik övervakning under en viss tidsperiod
 network_usage_samples = []
-network_check_interval = 10  # sekunder mellan varje nätverkskontroll
-network_monitor_duration = 60  # total period för att samla in nätverksdata
+network_check_interval = 10
+previous_sent = 0
+previous_recv = 0
+previous_time = time.time()
 
-# Import Flask GUI
-if config.getboolean('general', 'enable_web_interface'):
-    from GUI import app
-    from threading import Thread
+# Flask/SocketIO Server
+def start_web_interface():
+    if config.getboolean('general', 'enable_web_interface'):
+        from GUI import app, socketio  # Import Flask GUI and SocketIO
+        socketio.run(app, host='0.0.0.0', port=5000)
 
+# Starta SocketIO-servern i en separat tråd
 if enable_web_interface:
-    # Starta Flask-applikationen i en separat tråd så att den inte blockerar övervakningsloopen
-    flask_thread = Thread(target=app.run, kwargs={'host': '0.0.0.0', 'port': 5000})
+    flask_thread = Thread(target=start_web_interface)
     flask_thread.start()
-
-def reload_config():
-    config.read('config.ini')
-    log_message("info", "Configuration reloaded")
 
 # Skapa en funktion för att samla in och analysera nätverksdata
 def monitor_network_usage():
-    global network_usage_samples
+    global previous_sent, previous_recv, previous_time
+
+    # Hämta nuvarande nätverksstatistik
     net_info = psutil.net_io_counters()
-    bytes_sent = net_info.bytes_sent
-    bytes_recv = net_info.bytes_recv
+    current_sent = net_info.bytes_sent
+    current_recv = net_info.bytes_recv
+    current_time = time.time()
 
-    # Spara den senaste nätverksstatistiken
-    network_usage_samples.append((bytes_sent, bytes_recv))
+    # Beräkna tidsskillnaden
+    time_diff = current_time - previous_time
 
-    # Om vi har samlat tillräckligt med data, analysera den
-    if len(network_usage_samples) * network_check_interval >= network_monitor_duration:
-        initial_sent, initial_recv = network_usage_samples[0]
-        final_sent, final_recv = network_usage_samples[-1]
+    sent_speed_mbit = 0
+    recv_speed_mbit = 0
 
-        # Beräkna skillnaden i bytes
-        sent_diff = final_sent - initial_sent
-        recv_diff = final_recv - initial_recv
+    if previous_sent != 0 and previous_recv != 0 and time_diff > 0:
+        # Beräkna skillnaden i bytes skickade och mottagna
+        sent_diff = current_sent - previous_sent
+        recv_diff = current_recv - previous_recv
 
-        # Kontrollera om det finns en dramatisk ökning i trafiken
-        if sent_diff > NETWORK_THRESHOLD or recv_diff > NETWORK_THRESHOLD:
-            log_message("warning", "Sudden increase in network traffic detected.")
+        # Omvandla till Mbit/s
+        sent_speed_mbit = (sent_diff * 8) / (time_diff * 1_000_000)
+        recv_speed_mbit = (recv_diff * 8) / (time_diff * 1_000_000)
+
+        log_message("info", f"Sent: {sent_speed_mbit:.2f} Mbit/s, Received: {recv_speed_mbit:.2f} Mbit/s")
+
+        # Kontrollera om trafiken överskrider tröskelvärdet (i Mbit/s)
+        if sent_speed_mbit > NETWORK_THRESHOLD or recv_speed_mbit > NETWORK_THRESHOLD:
+            log_message("warning", f"High network traffic detected. Sent: {sent_speed_mbit:.2f} Mbit/s, Received: {recv_speed_mbit:.2f} Mbit/s")
             send_email(
-                subject="Warning: Potential DDoS Attack Detected",
-                body=f"Significant network traffic detected over the last {network_monitor_duration} seconds. "
-                     f"Bytes received: {recv_diff}, Bytes sent: {sent_diff}."
+                subject="Warning: High network traffic",
+                body=f"High network traffic detected. Sent: {sent_speed_mbit:.2f} Mbit/s, Received: {recv_speed_mbit:.2f} Mbit/s"
             )
 
-        network_usage_samples = []
-    
-    log_message("info", "Collecting network data for analysis")
+    # Uppdatera föregående värden för nästa mätning
+    previous_sent = current_sent
+    previous_recv = current_recv
+    previous_time = current_time
 
-    #Return the latest values
-    return bytes_recv, bytes_sent
+    # Returnera nätverkshastigheter
+    return sent_speed_mbit, recv_speed_mbit
+
 
 def detect_ddos_pattern():
-    if len(network_usage_samples) >= 3:  # Vi behöver åtminstone 3 dataloggningar för att analysera trender
-        sent_diffs = [network_usage_samples[i+1][0] - network_usage_samples[i][0] for i in range(len(network_usage_samples)-1)]
-        recv_diffs = [network_usage_samples[i+1][1] - network_usage_samples[i][1] for i in range(len(network_usage_samples)-1)]
+    global previous_sent, previous_recv
 
-        # Kolla om trafiken ökar snabbt
-        if all(diff > NETWORK_THRESHOLD for diff in sent_diffs) or all(diff > NETWORK_THRESHOLD for diff in recv_diffs):
+    if previous_sent != 0 and previous_recv != 0:
+        sent_diff = previous_sent
+        recv_diff = previous_recv
+
+        # Om hastigheten har ökat drastiskt över ett par mätningar
+        if sent_diff > NETWORK_THRESHOLD or recv_diff > NETWORK_THRESHOLD:
             log_message("warning", "DDoS pattern detected.")
             send_email(
                 subject="Critical Warning: DDoS Attack Pattern Detected",
                 body="Multiple network traffic spikes detected, which may indicate a DDoS attack."
             )
-            # Tömma samples för att undvika fler varningar för samma händelse
-            network_usage_samples.clear()
+            previous_sent = 0  # Nollställ för att undvika fler varningar för samma händelse
+            previous_recv = 0
 
 def send_email(subject, body):
     subject = f"{hostname} - {subject}"
@@ -197,7 +199,7 @@ while True:
     memory_usage = memory_info.percent
 
     # Check network usage
-    bytes_recv, bytes_sent = monitor_network_usage()
+    sent_speed, recv_speed = monitor_network_usage()
     detect_ddos_pattern()
 
     # Check disk usage
@@ -226,12 +228,12 @@ while True:
     else:
         memory_alert_sent = False
 
-    if (bytes_recv > NETWORK_THRESHOLD or bytes_sent > NETWORK_THRESHOLD):
+    if sent_speed > NETWORK_THRESHOLD or recv_speed > NETWORK_THRESHOLD:
         if not network_alert_sent:
             log_message("warning", "Network usage is high")
             send_email(
                 subject="Warning: High network traffic",
-                body=f"Network traffic has exceeded the threshold. Bytes received: {bytes_recv}, Bytes sent: {bytes_sent}."
+                body=f"Network traffic has exceeded the threshold. Upload: {sent_speed:.2f} Mbps, Download: {recv_speed:.2f} Mbps."
             )
             network_alert_sent = True
     else:
