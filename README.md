@@ -59,7 +59,7 @@ The Server Monitoring Tool is a lightweight and powerful Python-based monitoring
     [thresholds]
     CPU_THRESHOLD = 80
     MEMORY_THRESHOLD = 80
-    NETWORK_THRESHOLD = 1000000000
+    NETWORK_THRESHOLD = 100
     DISK_THRESHOLD = 90
     ```
 
@@ -68,7 +68,7 @@ The Server Monitoring Tool is a lightweight and powerful Python-based monitoring
 Run the monitoring script:
 
 ```bash
-python watch.py
+python main.py
 ```
 
 The script will start monitoring the server based on the configured thresholds and send email notifications when necessary. If the web interface is enabled in the configuration, it will also start the Flask web server.
@@ -77,7 +77,7 @@ The script will start monitoring the server based on the configured thresholds a
 
 ### General Settings
 
-- **enable_web_interface**: Set to `true` to enable the web interface.
+- **WEB_GUI**: Set to `true` to enable the web interface.
 
 ### Email Settings
 
@@ -92,7 +92,7 @@ The script will start monitoring the server based on the configured thresholds a
 
 - **CPU_THRESHOLD**: The CPU usage percentage threshold for alerts.
 - **MEMORY_THRESHOLD**: The memory usage percentage threshold for alerts.
-- **NETWORK_THRESHOLD**: The network usage threshold (in bytes) for alerts.
+- **NETWORK_THRESHOLD**: The network usage threshold (in Mbit/s) for alerts.
 - **DISK_THRESHOLD**: The disk usage percentage threshold for alerts.
 
 ### Process Monitoring

@@ -1,6 +1,10 @@
+# System monitor.py
+# Externa imports
 import psutil
 import time
 import platform
+
+#Local imports
 from utils.logger import log_message
 from utils.mailer import send_alert
 from utils.config import config
@@ -92,7 +96,7 @@ def detect_ddos_pattern():
     if sent_speed_mbit > NETWORK_THRESHOLD or recv_speed_mbit > NETWORK_THRESHOLD:
         send_alert("Network", "DDoS pattern detected.")
 
-
+# fetch operating system
 def get_operatingsystem():
     if os_type == "Linux":
         log_message("info", "Running on Linux")

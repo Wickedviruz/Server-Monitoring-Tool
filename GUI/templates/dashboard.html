@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Server Monitoring Dashboard</h1>
+
+<!-- Charts -->
+<div class="chart-container">
+    <div class="chart">
+        <canvas id="cpuChart"></canvas>
+        <div class="chart-text" id="cpuText">CPU Load: 0%</div>
+    </div>
+    <div class="chart">
+        <canvas id="ramChart"></canvas>
+        <div class="chart-text" id="ramText">RAM Usage: 0%</div>
+    </div>
+    <div class="chart">
+        <canvas id="networkChart"></canvas>
+        <div class="chart-text" id="networkText">Upload: 0 Mbps</div>
+    </div>
+</div>
+
+<!-- System Information Table -->
+<table class="info-table">
+    <tr><th>System Hostname</th><td id="hostname"></td></tr>
+    <tr><th>Operating System</th><td id="operating_system"></td></tr>
+    <tr><th>Server Monitoring Version</th><td id="server_monitoring_version"></td></tr>
+    <tr><th>GUI Version</th><td id="gui_version"></td></tr>
+    <tr><th>Current Time (System)</th><td id="current_time"></td></tr>
+    <tr><th>Kernel and CPU</th><td id="cpu_info"></td></tr>
+    <tr><th>System Uptime</th><td id="uptime"></td></tr>
+    <tr><th>Number of Processes</th><td id="num_processes"></td></tr>
+</table>
+{% endblock %}

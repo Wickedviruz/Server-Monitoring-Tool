@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>Menu</h2>
+        <a href="/">Dashboard</a>
+        <a href="/processes">Processes</a>
+        <a href="/logs">System Logs</a>
+        <a href="/network">Network Status</a>
+        <a href="/disk">Disk Usage</a>
+        <a href="/settings">Settings</a>
+    </div>
+
+    <!-- Main content -->
+    <div class="main-content">
+        {% block content %} 
+        {% endblock %}
+    </div>
+    <script src="/static/script.js"></script>
+</body>
+</html>

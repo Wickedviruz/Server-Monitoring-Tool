@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Disk Usage</h1>
+<ul>
+    {% for partition in partitions %}
+    <li>Mount: {{ partition.mountpoint }} - {{ partition.percent }}% used</li>
+    {% endfor %}
+</ul>
+{% endblock %}

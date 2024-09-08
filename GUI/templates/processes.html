@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Active Processes</h1>
+<table>
+    <tr>
+        <th>PID</th>
+        <th>Name</th>
+        <th>CPU %</th>
+        <th>Memory %</th>
+    </tr>
+    {% for process in processes %}
+    <tr>
+        <td>{{ process.pid }}</td>
+        <td>{{ process.name }}</td>
+        <td>{{ process.cpu_percent }}</td>
+        <td>{{ process.memory_percent }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

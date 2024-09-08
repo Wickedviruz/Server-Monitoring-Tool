@@ -6,32 +6,225 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Server Monitoring Dashboard</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Chart.js -->
     <style>
-        body { font-family: Arial, sans-serif; }
-        h1 { text-align: center; }
-        .metric { text-align: center; margin-top: 20px; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar styles */
+        .sidebar {
+            width: 250px;
+            background-color: #333;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding-top: 20px;
+        }
+
+        .sidebar h2 {
+            text-align: center;
+            color: white;
+        }
+
+        .sidebar a {
+            padding: 15px;
+            text-decoration: none;
+            font-size: 18px;
+            color: white;
+            display: block;
+        }
+
+        .sidebar a:hover {
+            background-color: #575757;
+        }
+
+        /* Main content styles */
+        .main-content {
+            flex-grow: 1;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .info-table {
+            margin: 0 auto;
+            border-collapse: collapse;
+        }
+
+        .info-table th, .info-table td {
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+
+        .info-table th {
+            background-color: #f2f2f2;
+        }
+
+        .chart-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .chart {
+            width: 150px;
+            height: 150px;
+            margin: 0 20px;
+            position: relative;
+        }
+
+        .chart canvas {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .chart-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 14px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
-    <h1>Server Monitoring Dashboard</h1>
-    <div class="metric" id="cpu_usage">CPU Usage: </div>
-    <div class="metric" id="memory_usage">Memory Usage: </div>
-    <div class="metric" id="disk_usage">Disk Usage: </div>
-    <div class="metric" id="network_sent">Network Sent: </div>
-    <div class="metric" id="network_recv">Network Received: </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>Menu</h2>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/processes">Processes</a>
+        <a href="/logs">System Logs</a>
+        <a href="/network">Network Status</a>
+        <a href="/disk">Disk Usage</a>
+        <a href="/settings">Settings</a>
+    </div>
+
+    <!-- Main content -->
+    <div class="main-content">
+        <h1>Server Monitoring Dashboard</h1>
+
+        <!-- Charts -->
+        <div class="chart-container">
+            <div class="chart">
+                <canvas id="cpuChart"></canvas>
+                <div class="chart-text" id="cpuText">CPU Load: 0%</div>
+            </div>
+            <div class="chart">
+                <canvas id="ramChart"></canvas>
+                <div class="chart-text" id="ramText">RAM Usage: 0%</div>
+            </div>
+            <div class="chart">
+                <canvas id="networkChart"></canvas>
+                <div class="chart-text" id="networkText">Upload: 0 Mbps</div>
+            </div>
+        </div>
+
+        <!-- System Information Table -->
+        <table class="info-table">
+            <tr><th>System Hostname</th><td id="hostname"></td></tr>
+            <tr><th>Operating System</th><td id="operating_system"></td></tr>
+            <tr><th>Server Monitoring Version</th><td id="server_monitoring_version"></td></tr>
+            <tr><th>GUI Version</th><td id="gui_version"></td></tr>
+            <tr><th>Current Time (System)</th><td id="current_time"></td></tr>
+            <tr><th>Kernel and CPU</th><td id="cpu_info"></td></tr>
+            <tr><th>System Uptime</th><td id="uptime"></td></tr>
+            <tr><th>Number of Processes</th><td id="num_processes"></td></tr>
+        </table>
+    </div>
 
     <script type="text/javascript">
-        // Tvinga användning av WebSocket endast
-        var socket = io.connect('http://' + document.domain + ':' + location.port, {
-            transports: ['websocket']
+        var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+        // Doughnut chart options
+        var chartOptions = {
+            cutout: '70%', // To make it look like a circular graph
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        };
+
+        // CPU Load chart
+        var cpuCtx = document.getElementById('cpuChart').getContext('2d');
+        var cpuChart = new Chart(cpuCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Used', 'Free'],
+                datasets: [{
+                    data: [0, 100], // Initial value
+                    backgroundColor: ['#FF6384', '#36A2EB']
+                }]
+            },
+            options: chartOptions
         });
 
-        socket.on('update_data', function(metrics) {
-            document.getElementById("cpu_usage").innerText = "CPU Usage: " + metrics.cpu_usage + "%";
-            document.getElementById("memory_usage").innerText = "Memory Usage: " + metrics.memory_usage + "%";
-            document.getElementById("disk_usage").innerText = "Disk Usage: " + metrics.disk_usage + "%";
-            document.getElementById("network_sent").innerText = "Network Sent: " + metrics.upload_speed + " Mbps";
-            document.getElementById("network_recv").innerText = "Network Received: " + metrics.download_speed + " Mbps";
+        // RAM Memory chart
+        var ramCtx = document.getElementById('ramChart').getContext('2d');
+        var ramChart = new Chart(ramCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Used', 'Free'],
+                datasets: [{
+                    data: [0, 100], // Initial value
+                    backgroundColor: ['#FFCE56', '#36A2EB']
+                }]
+            },
+            options: chartOptions
+        });
+
+        // Network Upload/Download chart
+        var networkCtx = document.getElementById('networkChart').getContext('2d');
+        var networkChart = new Chart(networkCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Upload', 'Download'],
+                datasets: [{
+                    data: [0, 0], // Initial value for upload/download speeds in Mbps
+                    backgroundColor: ['#4BC0C0', '#FF6384']
+                }]
+            },
+            options: chartOptions
+        });
+
+        socket.on('connect', function() {
+            console.log('Connected to server');
+        });
+
+        socket.on('update_system_info', function(data) {
+            // Update text in the table
+            document.getElementById("hostname").innerText = data.hostname;
+            document.getElementById("operating_system").innerText = data.operating_system;
+            document.getElementById("server_monitoring_version").innerText = data.server_monitoring_version;
+            document.getElementById("gui_version").innerText = data.gui_version;
+            document.getElementById("current_time").innerText = data.current_time;
+            document.getElementById("cpu_info").innerText = data.cpu_info;
+            document.getElementById("uptime").innerText = data.uptime;
+            document.getElementById("num_processes").innerText = data.num_processes + " processes";
+
+            // Update charts with real data and text inside the charts
+            cpuChart.data.datasets[0].data = [data.cpu_usage, 100 - data.cpu_usage];
+            cpuChart.update();
+            document.getElementById('cpuText').innerText = `CPU Load: ${data.cpu_usage}%`;
+
+            ramChart.data.datasets[0].data = [data.memory_usage, 100 - data.memory_usage];
+            ramChart.update();
+            document.getElementById('ramText').innerText = `RAM Usage: ${data.memory_usage}%`;
+
+            networkChart.data.datasets[0].data = [data.upload_speed, data.download_speed];
+            networkChart.update();
+            document.getElementById('networkText').innerText = `Upload: ${data.upload_speed.toFixed(2)} Mbps\nDownload: ${data.download_speed.toFixed(2)} Mbps`;
         });
     </script>
 </body>

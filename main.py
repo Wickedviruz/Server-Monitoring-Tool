@@ -1,17 +1,21 @@
+#main.py
+# External libs
 import eventlet
+import socket
+import datetime
+import time
 from threading import Thread
+
+#Locla imports
 from GUI import app, socketio
 from utils.system_monitor import monitor_cpu, monitor_memory, monitor_disk_partitions, monitor_network_usage, detect_ddos_pattern, get_operatingsystem
 from utils.process_monitor import monitor_process
 from utils.logger import log_message
 from utils.mailer import send_email
 from utils.config import config
-import socket
-import datetime
-import time
 
-eventlet.monkey_patch()  # Lägg till detta för att använda eventlet
 
+eventlet.monkey_patch()
 hostname = socket.gethostname()
 
 # Main monitoring loop
@@ -54,7 +58,7 @@ if __name__ == '__main__':
     monitoring_thread = Thread(target=monitor_resources)
     monitoring_thread.start()
 
-    # Kontrollera config och starta Flask/SocketIO om WEB_GUI är aktiverat
+    # control config and start Flask/SocketIO if WEB_GUI is activated
     if config.getboolean('general', 'WEB_GUI'):
         log_message("info","Starting Flask/SocketIO server with eventlet...")
         socketio.run(app, host='0.0.0.0', port=5000, debug=True, use_reloader=False)

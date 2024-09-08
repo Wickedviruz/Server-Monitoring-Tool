@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>System Logs</h1>
+<ul>
+    {% for log in logs %}
+    <li>{{ log }}</li>
+    {% endfor %}
+</ul>
+{% endblock %}

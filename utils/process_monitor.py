@@ -1,5 +1,9 @@
+# process monitor.py
+# Externa libs import
 import psutil
 import os
+
+# Local module imports
 from utils.logger import log_message
 from utils.mailer import send_alert
 

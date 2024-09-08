@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Settings</h1>
+<form method="POST" action="/settings">
+    <label for="cpu_threshold">CPU Threshold (%):</label>
+    <input type="number" name="cpu_threshold" id="cpu_threshold" value="{{ settings.cpu_threshold }}">
+    <br>
+    <label for="memory_threshold">Memory Threshold (%):</label>
+    <input type="number" name="memory_threshold" id="memory_threshold" value="{{ settings.memory_threshold }}">
+    <br>
+    <button type="submit">Save Settings</button>
+</form>
+{% endblock %}
