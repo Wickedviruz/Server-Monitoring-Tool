@@ -2,37 +2,36 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Server Monitor - {{ hostname }}</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <title>Server Monitoring Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        h1 { text-align: center; }
+        .metric { text-align: center; margin-top: 20px; }
+    </style>
 </head>
 <body>
-    <h1>Server Monitor for {{ hostname }}</h1>
-
-    <div>
-        <h3>CPU Usage: <span id="cpu-usage">0%</span></h3>
-        <h3>Memory Usage: <span id="memory-usage">0%</span></h3>
-        <h3>Disk Usage: <span id="disk-usage">0%</span></h3>
-        <h3>Upload Speed: <span id="upload-speed">0 Mbps</span></h3>
-        <h3>Download Speed: <span id="download-speed">0 Mbps</span></h3>
-    </div>
+    <h1>Server Monitoring Dashboard</h1>
+    <div class="metric" id="cpu_usage">CPU Usage: </div>
+    <div class="metric" id="memory_usage">Memory Usage: </div>
+    <div class="metric" id="disk_usage">Disk Usage: </div>
+    <div class="metric" id="network_sent">Network Sent: </div>
+    <div class="metric" id="network_recv">Network Received: </div>
 
     <script type="text/javascript">
-        $(document).ready(function () {
-            var socket = io.connect('http://' + document.domain + ':' + location.port);
+        // Tvinga användning av WebSocket endast
+        var socket = io.connect('http://' + document.domain + ':' + location.port, {
+            transports: ['websocket']
+        });
 
-            // Skicka begäran om att starta datauppdatering
-            socket.emit('request_data');
-
-            // Ta emot data från servern och uppdatera HTML-element
-            socket.on('update_data', function (data) {
-                $('#cpu-usage').text(data.cpu_usage + '%');
-                $('#memory-usage').text(data.memory_usage + '%');
-                $('#disk-usage').text(data.disk_usage + '%');
-                $('#upload-speed').text(data.upload_speed + ' Mbps');
-                $('#download-speed').text(data.download_speed + ' Mbps');
-            });
+        socket.on('update_data', function(metrics) {
+            document.getElementById("cpu_usage").innerText = "CPU Usage: " + metrics.cpu_usage + "%";
+            document.getElementById("memory_usage").innerText = "Memory Usage: " + metrics.memory_usage + "%";
+            document.getElementById("disk_usage").innerText = "Disk Usage: " + metrics.disk_usage + "%";
+            document.getElementById("network_sent").innerText = "Network Sent: " + metrics.upload_speed + " Mbps";
+            document.getElementById("network_recv").innerText = "Network Received: " + metrics.download_speed + " Mbps";
         });
     </script>
 </body>
