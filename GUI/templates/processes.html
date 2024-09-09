@@ -1,20 +1,108 @@
 {% extends "base.html" %}
+
 {% block content %}
 <h1>Active Processes</h1>
-<table>
-    <tr>
-        <th>PID</th>
-        <th>Name</th>
-        <th>CPU %</th>
-        <th>Memory %</th>
-    </tr>
-    {% for process in processes %}
-    <tr>
-        <td>{{ process.pid }}</td>
-        <td>{{ process.name }}</td>
-        <td>{{ process.cpu_percent }}</td>
-        <td>{{ process.memory_percent }}</td>
-    </tr>
-    {% endfor %}
+<input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Search for processes...">
+<table class="styled-table" id="processTable">
+    <thead>
+        <tr>
+            <th onclick="sortTable(0)">PID</th>
+            <th onclick="sortTable(1)">Name</th>
+            <th onclick="sortTable(2)">CPU %</th>
+            <th onclick="sortTable(3)">Memory %</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for process in processes %}
+        <tr>
+            <td>{{ process.pid }}</td>
+            <td>{{ process.name }}</td>
+            <td>{{ process.cpu_percent }}%</td>
+            <td>{{ process.memory_percent }}%</td>
+            <td>
+                <form action="/kill_process/{{ process.pid }}" method="POST">
+                    <button type="submit" onclick="return confirm('Are you sure you want to kill this process?');">
+                        Kill
+                    </button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
 </table>
+
+<script>
+    function sortTable(n) {
+        var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+        table = document.getElementById("processTable");
+        switching = true;
+        dir = "asc"; 
+        while (switching) {
+            switching = false;
+            rows = table.rows;
+            for (i = 1; i < (rows.length - 1); i++) {
+                shouldSwitch = false;
+                x = rows[i].getElementsByTagName("TD")[n];
+                y = rows[i + 1].getElementsByTagName("TD")[n];
+                if (dir == "asc") {
+                    if (n == 0 || n == 2 || n == 3) {  // För numeriska kolumner (PID, CPU, Memory)
+                        if (parseFloat(x.innerHTML) > parseFloat(y.innerHTML)) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    } else {  // För textkolumner (Name)
+                        if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    }
+                } else if (dir == "desc") {
+                    if (n == 0 || n == 2 || n == 3) {
+                        if (parseFloat(x.innerHTML) < parseFloat(y.innerHTML)) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    } else {
+                        if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (shouldSwitch) {
+                rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                switching = true;
+                switchcount++;
+            } else {
+                if (switchcount == 0 && dir == "asc") {
+                    dir = "desc";
+                    switching = true;
+                }
+            }
+        }
+    }
+    function searchTable() {
+    var input, filter, table, tr, td, i, txtValue;
+    input = document.getElementById("searchInput");
+    filter = input.value.toLowerCase();
+    table = document.getElementById("processTable");
+    tr = table.getElementsByTagName("tr");
+
+    for (i = 1; i < tr.length; i++) {
+        tr[i].style.display = "none"; // Döljer alla rader först
+        for (var j = 0; j < tr[i].getElementsByTagName("td").length; j++) {
+            td = tr[i].getElementsByTagName("td")[j];
+            if (td) {
+                txtValue = td.textContent || td.innerText;
+                if (txtValue.toLowerCase().indexOf(filter) > -1) {
+                    tr[i].style.display = "";  // Visar raden om matchning finns
+                    break;  // Fortsätt till nästa rad om en kolumn matchar
+                }
+            }
+        }
+    }
+}
+</script>
 {% endblock %}

@@ -1,9 +1,117 @@
 {% extends "base.html" %}
+
 {% block content %}
 <h1>System Logs</h1>
-<ul>
-    {% for log in logs %}
-    <li>{{ log }}</li>
-    {% endfor %}
-</ul>
+
+<!-- Log Summary in a horizontal row -->
+<div style="display: flex; justify-content: center; margin-bottom: 20px;">
+    <div style="margin-right: 20px;">
+        <strong>Info:</strong> <span id="info-count">0</span>
+    </div>
+    <div style="margin-right: 20px;">
+        <strong>Warning:</strong> <span id="warning-count">0</span>
+    </div>
+    <div style="margin-right: 20px;">
+        <strong>Error:</strong> <span id="error-count">0</span>
+    </div>
+    <div style="margin-right: 20px;">
+        <strong>Critical:</strong> <span id="critical-count">0</span>
+    </div>
+</div>
+<input type="text" id="logSearch" placeholder="Search logs..." oninput="filterLogs()">
+<button onclick="exportLogs()">Export Logs</button>
+
+<input type="date" id="logDate" onchange="fetchLogsForDate()">
+
+<label><input type="checkbox" id="infoFilter" checked onchange="filterByLogLevel()"> Info</label>
+<label><input type="checkbox" id="warningFilter" checked onchange="filterByLogLevel()"> Warning</label>
+<label><input type="checkbox" id="errorFilter" checked onchange="filterByLogLevel()"> Error</label>
+<label><input type="checkbox" id="criticalFilter" checked onchange="filterByLogLevel()"> Critical</label>
+
+<!-- Log container -->
+<div id="log-container" style="white-space: pre-wrap; background-color: #f4f4f4; padding: 10px; height: 400px; overflow-y: scroll;">
+    Loading logs...
+</div>
+
+<script>
+    function fetchLogSummary() {
+        fetch('/get_log_summary')
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error(data.error);
+                } else {
+                    // Update the counts in the horizontal log summary
+                    document.getElementById('info-count').innerText = data.info;
+                    document.getElementById('warning-count').innerText = data.warning;
+                    document.getElementById('error-count').innerText = data.error;
+                    document.getElementById('critical-count').innerText = data.critical;
+                }
+            });
+    }
+    function exportLogs() {
+        const logText = document.getElementById('log-container').innerText;
+        const blob = new Blob([logText], { type: 'text/plain' });
+        const link = document.createElement('a');
+        link.href = window.URL.createObjectURL(blob);
+        link.download = 'logs.txt';
+        link.click();
+    }
+    function filterLogs() {
+        const searchTerm = document.getElementById('logSearch').value.toLowerCase();
+        const logContainer = document.getElementById('log-container');
+        const logs = logContainer.innerText.split('\n');
+        const filteredLogs = logs.filter(log => log.toLowerCase().includes(searchTerm));
+        logContainer.innerText = filteredLogs.join('\n');
+    }
+    function fetchLogs() {
+        fetch('/get_logs')
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('log-container').innerText = data.error;
+                } else {
+                    document.getElementById('log-container').innerText = data.join('\n');
+                    const logContainer = document.getElementById('log-container');
+                    logContainer.scrollTop = logContainer.scrollHeight;  // Auto-scroll to bottom
+                }
+            });
+    }
+    function filterByLogLevel() {
+        const logContainer = document.getElementById('log-container');
+        const logs = logContainer.innerText.split('\n');
+
+        const showInfo = document.getElementById('infoFilter').checked;
+        const showWarning = document.getElementById('warningFilter').checked;
+        const showError = document.getElementById('errorFilter').checked;
+        const showCritical = document.getElementById('criticalFilter').checked;
+
+        const filteredLogs = logs.filter(log => {
+            if (log.includes('INFO') && showInfo) return true;
+            if (log.includes('WARNING') && showWarning) return true;
+            if (log.includes('ERROR') && showError) return true;
+            if (log.includes('CRITICAL') && showCritical) return true;
+            return false;
+        });
+
+        logContainer.innerText = filteredLogs.join('\n');
+    }
+
+    function fetchLogsForDate() {
+        const selectedDate = document.getElementById('logDate').value;
+        fetch(`/get_logs?date=${selectedDate}`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('log-container').innerText = data.join('\n');
+            });
+    }
+
+    // Fetch logs initially and then every 5 seconds
+    fetchLogs();
+    setInterval(fetchLogs, 5000);  // Refresh logs every 5 seconds
+
+    // Fetch log summary initially and then every 10 seconds
+    fetchLogSummary();
+    setInterval(fetchLogSummary, 10000);  // Refresh log summary every 10 seconds
+</script>
 {% endblock %}

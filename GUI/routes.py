@@ -1,10 +1,11 @@
 from GUI import app, socketio
-from flask import render_template, request, redirect, url_for, session
+from flask import render_template, request, redirect, url_for, jsonify
 from flask_socketio import emit
 import psutil
 import platform
 import socket
 import time
+import os
 from threading import Thread
 from datetime import datetime
 
@@ -17,6 +18,16 @@ users = {'admin': 'password'}
 # Keep track of the last network IO data
 last_net_io = psutil.net_io_counters()
 last_time = time.time()
+
+process_cache = {
+    "data": [],
+    "timestamp": 0
+}
+
+CACHE_TIMEOUT = 10  # Cache timeout in seconds
+
+LOG_FILE_PATH = os.path.join(os.path.dirname(__file__), '..', 'server_monitor.log')
+
 
 # Function to get system info
 def get_system_info():
@@ -97,13 +108,74 @@ def dashboard():
 
 @app.route('/processes')
 def processes():
-    processes = psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent'])
-    return render_template('processes.html', processes=processes)
+    num_cores = psutil.cpu_count(logical=True)  # Antal logiska kärnor
+    process_data = []
+    for proc in psutil.process_iter(['pid', 'name']):
+        try:
+            cpu_percent = proc.cpu_percent(interval=0.1) / num_cores  # Dela CPU % med antal kärnor
+            memory_percent = proc.memory_percent()
+
+            process_info = {
+                'pid': proc.pid,
+                'name': proc.info['name'] if proc.info['name'] else "N/A",  # Hantera saknad processnamn
+                'cpu_percent': f"{cpu_percent:.2f}",  # CPU % med två decimaler
+                'memory_percent': f"{memory_percent:.2f}"  # Minnesanvändning i procent
+            }
+            process_data.append(process_info)
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            pass  # Hantera processer som inte längre finns eller där åtkomst nekas
+
+    return render_template('processes.html', processes=process_data)
+
+
+@app.route('/kill_process/<int:pid>', methods=['POST'])
+def kill_process(pid):
+    try:
+        proc = psutil.Process(pid)
+        proc.terminate()  # Försök avsluta processen
+        return redirect(url_for('processes'))  # Ladda om process-sidan efter avslutning
+    except psutil.NoSuchProcess:
+        return f"Process {pid} does not exist", 404
+    except psutil.AccessDenied:
+        return f"Permission denied to kill process {pid}", 403
+
 
 @app.route('/logs')
 def logs():
-    logs = ["Log entry 1", "Log entry 2", "Log entry 3"]  # Replace with real log data
-    return render_template('logs.html', logs=logs)
+    return render_template('logs.html')  # Render log page
+
+@app.route('/get_logs', methods=['GET'])
+def get_logs():
+    """Reads the log file and returns the content."""
+    if os.path.exists(LOG_FILE_PATH):
+        with open(LOG_FILE_PATH, 'r') as log_file:
+            log_content = log_file.readlines()[-100:]  # Read the last 100 lines
+            return jsonify(log_content)
+    return jsonify({"error": "Log file not found."}), 404
+
+@app.route('/get_log_summary', methods=['GET'])
+def get_log_summary():
+    """Provides a summary of log levels from the log file."""
+    if os.path.exists(LOG_FILE_PATH):
+        summary = {
+            "info": 0,
+            "warning": 0,
+            "error": 0,
+            "critical": 0
+        }
+        with open(LOG_FILE_PATH, 'r') as log_file:
+            for line in log_file:
+                if "INFO" in line:
+                    summary["info"] += 1
+                elif "WARNING" in line:
+                    summary["warning"] += 1
+                elif "ERROR" in line:
+                    summary["error"] += 1
+                elif "CRITICAL" in line:
+                    summary["critical"] += 1
+        return jsonify(summary)
+    return jsonify({"error": "Log file not found."}), 404
+
 
 @app.route('/network')
 def network():

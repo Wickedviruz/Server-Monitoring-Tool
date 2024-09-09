@@ -14,3 +14,5 @@ def log_message(level, message):
         logging.warning(message)
     elif level == "error":
         logging.error(message)
+    elif level == "critical":
+        logging.critical(message)
