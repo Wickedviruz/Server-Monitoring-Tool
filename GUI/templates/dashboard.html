@@ -30,25 +30,4 @@
     <tr><th>System Uptime</th><td id="uptime"></td></tr>
     <tr><th>Number of Processes</th><td id="num_processes"></td></tr>
 </table>
-
-
-<h3>Top 5 CPU-Intensive Processes</h3>
-<table class="info-table">
-    <tr><th>Process</th><th>CPU %</th><th>Memory %</th></tr>
-    <tr><td id="top-process-1-name"></td><td id="top-process-1-cpu"></td><td id="top-process-1-mem"></td></tr>
-    <tr><td id="top-process-2-name"></td><td id="top-process-2-cpu"></td><td id="top-process-2-mem"></td></tr>
-    <tr><td id="top-process-3-name"></td><td id="top-process-3-cpu"></td><td id="top-process-3-mem"></td></tr>
-    <tr><td id="top-process-4-name"></td><td id="top-process-4-cpu"></td><td id="top-process-4-mem"></td></tr>
-    <tr><td id="top-process-5-name"></td><td id="top-process-5-cpu"></td><td id="top-process-5-mem"></td></tr>
-</table>
-
-<script>
-    socket.on('update_top_processes', function(data) {
-    for (let i = 0; i < 5; i++) {
-        document.getElementById(`top-process-${i+1}-name`).innerText = data.processes[i].name;
-        document.getElementById(`top-process-${i+1}-cpu`).innerText = `${data.processes[i].cpu}%`;
-        document.getElementById(`top-process-${i+1}-mem`).innerText = `${data.processes[i].memory}%`;
-    }
-});
-</script>
 {% endblock %}
